@@ -8,7 +8,7 @@ Hướng dẫn từng bước cài đặt và sử dụng **My Translator** trê
 
 - Windows 10 trở lên (x64 hoặc ARM64)
 - API key từ [Soniox](https://soniox.com) (trả theo dùng, ~$0.12/giờ)
-- **Thuyết minh TTS** (tuỳ chọn): API key của [ElevenLabs](https://elevenlabs.io) (gói Starter $5/tháng)
+- **Thuyết minh TTS** (tuỳ chọn): Xem [Hướng dẫn TTS](tts_guide_vi.md) để chọn nhà cung cấp (Edge TTS miễn phí, không cần API key)
 
 ---
 
@@ -95,28 +95,27 @@ Nhấn **Save & Close** khi xong.
 
 ## Bước 5 — Bật Thuyết Minh TTS (Tuỳ chọn)
 
-Muốn bản dịch được **đọc thành lời**? Bật tính năng TTS:
+Muốn bản dịch được **đọc thành lời**? Có 3 nhà cung cấp:
 
-1. Trong Settings, cuộn xuống phần **TTS Narration**
-2. Tick **"Đọc bản dịch thành lời (Enable narration)"**
+| Nhà cung cấp | Chi phí | Chất lượng | Cài đặt |
+|---------------|---------|------------|---------|
+| 🎙️ **Edge TTS** | Miễn phí | Tự nhiên | Không cần gì |
+| 🌐 **Google Chirp 3 HD** | Free 1M ký tự/tháng | Gần giọng người | Cần Google Cloud API key |
+| ✨ **ElevenLabs** | ~$5/tháng trở lên | Cao cấp | Cần ElevenLabs API key |
 
-![Cài đặt — TTS tắt](user_manual/mytrans_setting_2.png)
+### Cài nhanh (Edge TTS — miễn phí):
 
-3. Nhập **API key ElevenLabs**
-4. Chọn **giọng nói** (2 nữ, 2 nam — đều hỗ trợ tiếng Việt)
-5. Nhấn **Save & Close**
+1. Settings → tab **TTS** → Provider: **Edge TTS**
+2. Chọn giọng → **Save & Close**
+3. Trên màn hình chính, bấm nút **TTS** (hoặc `Ctrl+T`) để bật
 
-![Cài đặt — TTS bật với API key và giọng nói](user_manual/mytrans_setting_3.png)
+### Google hoặc ElevenLabs:
 
-> 💡 **Lấy API key ElevenLabs ở đâu?**
-> 1. Vào [elevenlabs.io](https://elevenlabs.io) → tạo tài khoản
-> 2. Đăng ký gói **Starter** ($5/tháng, ~60 phút TTS)
-> 3. Vào **Developers → API Keys** → tạo key với quyền "Text to Speech"
+Xem [Hướng dẫn TTS](tts_guide_vi.md) để biết cách lấy API key từng bước.
 
-![ElevenLabs — Gói Subscription](user_manual/mytrans_key_2.png)
-![ElevenLabs — Tạo API Key](user_manual/mytrans_key_3.png)
+> ⚠️ **Windows: dùng tai nghe khi ở chế độ one-way.** Trên Windows, việc bắt âm thanh hệ thống hiện cũng bắt luôn TTS của chính app, dễ tạo vòng lặp feedback (TTS bị bắt lại và dịch lại). Dùng tai nghe để tránh. Chế độ two-way tự tắt TTS nên không bị ảnh hưởng.
 
-> 💡 TTS là tuỳ chọn. Nếu tắt, app hoạt động như bình thường — chỉ dịch text.
+> 💡 TTS **mặc định TẮT** mỗi lần mở app — bật bằng nút TTS hoặc `Ctrl+T`. Nếu không dùng, app vẫn hoạt động bình thường — chỉ dịch text.
 
 ---
 
@@ -149,7 +148,13 @@ Nếu TTS đã bật, bạn có thể bật/tắt bằng nút **TTS** hoặc `Ct
 | `Ctrl+Enter` | Bắt đầu / Dừng |
 | `Ctrl+,` | Mở Settings |
 | `Esc` | Đóng Settings |
+| `Ctrl+1` | Chuyển sang System Audio |
+| `Ctrl+2` | Chuyển sang Microphone |
+| `Ctrl+3` | Chuyển sang Both (System + Mic) |
 | `Ctrl+T` | Bật/tắt thuyết minh TTS |
+| `Ctrl+M` | Thu nhỏ cửa sổ |
+| `Ctrl+P` | Bật/tắt Always-on-Top (ghim) |
+| `Ctrl+D` | Bật/tắt chế độ Compact |
 
 ---
 

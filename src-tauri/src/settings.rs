@@ -64,6 +64,27 @@ pub struct Settings {
     pub google_tts_voice: String,
     /// Google TTS speaking rate
     pub google_tts_speed: f64,
+
+    // ─── LLM Revise (post-process Soniox translation for tone/persona) ───
+    /// Whether the LLM revise step is enabled
+    pub llm_polish_enabled: bool,
+    /// Provider: "gemini" | "anthropic" | "ollama"
+    pub llm_polish_provider: String,
+    /// Model id (e.g. "gemini-2.5-flash", "claude-haiku-4-5", "gemma3:4b")
+    pub llm_polish_model: String,
+    /// API key for the chosen cloud provider (unused for ollama)
+    pub llm_polish_api_key: String,
+    /// Ollama base URL (e.g. http://localhost:11434)
+    pub llm_polish_ollama_url: String,
+    /// Free-form tone / persona instructions used as system prompt
+    pub llm_polish_instructions: String,
+    /// Per-call timeout in milliseconds before falling back to draft
+    pub llm_polish_timeout_ms: u32,
+    /// How to display polished output:
+    ///   "replace" — show Soniox draft instantly, swap in polished when ready (current default)
+    ///   "wait"    — hold rendering until polish finishes (or timeout); no flicker, more latency
+    ///   "append"  — show both: Soniox draft stays, polished version appears under it
+    pub llm_polish_display_mode: String,
 }
 
 impl Default for Settings {
@@ -90,6 +111,14 @@ impl Default for Settings {
             google_tts_api_key: String::new(),
             google_tts_voice: "vi-VN-Chirp3-HD-Aoede".to_string(),
             google_tts_speed: 1.0,
+            llm_polish_enabled: false,
+            llm_polish_provider: "gemini".to_string(),
+            llm_polish_model: "gemini-2.5-flash".to_string(),
+            llm_polish_api_key: String::new(),
+            llm_polish_ollama_url: "http://localhost:11434".to_string(),
+            llm_polish_instructions: String::new(),
+            llm_polish_timeout_ms: 1500,
+            llm_polish_display_mode: "replace".to_string(),
         }
     }
 }

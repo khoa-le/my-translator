@@ -6,7 +6,7 @@ Step-by-step guide to install and use **My Translator** on macOS.
 
 ## Requirements
 
-- macOS 13 or later (Apple Silicon — M1/M2/M3/M4)
+- macOS 13 or later (Apple Silicon or Intel)
 - **Cloud mode**: [Soniox](https://soniox.com) API key (pay-per-use, ~$0.12/hour)
 - **Local mode**: ~5 GB free disk space (for AI models, one-time download)
 - **TTS narration** (optional): See [TTS Guide](tts_guide.md) for provider options
@@ -137,7 +137,11 @@ See [TTS Guide](tts_guide.md) for step-by-step API key instructions.
 | `Esc` | Close Settings |
 | `⌘ 1` | Switch to System Audio |
 | `⌘ 2` | Switch to Microphone |
+| `⌘ 3` | Switch to Both (System + Mic) |
 | `⌘ T` | Toggle TTS narration |
+| `⌘ M` | Minimize window |
+| `⌘ P` | Toggle Always-on-Top (pin) |
+| `⌘ D` | Toggle Compact mode |
 
 ---
 

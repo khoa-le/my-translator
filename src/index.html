@@ -479,6 +479,71 @@
             <div id="translation-terms-list"></div>
           </div>
         </div>
+
+        <!-- LLM Revise: post-process Soniox translation for tone/persona -->
+        <div class="settings-section" id="section-llm-polish">
+          <label class="checkbox-option">
+            <input type="checkbox" id="check-llm-polish-enabled" />
+            <span class="checkbox-label">Enable LLM Revise <span class="optional-badge">Optional</span></span>
+          </label>
+          <p class="hint" style="margin-top: 4px;">Send each Soniox translation to a light LLM that rewrites it in your tone / persona. The Soniox draft shows immediately; the polished version replaces it when ready.</p>
+
+          <div id="llm-polish-fields" style="margin-top: 10px;">
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Display mode</span>
+              <select id="select-llm-polish-display-mode">
+                <option value="replace">Show Soniox first, replace with polished (default)</option>
+                <option value="wait">Wait for polished, then show (no flicker)</option>
+                <option value="append">Show both — Soniox draft + polished beneath</option>
+              </select>
+              <p class="hint">Replace: instant feedback but the line changes mid-read. Wait: clean, but adds 0.5–2s latency. Append: see both, takes more space.</p>
+            </div>
+
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Provider</span>
+              <select id="select-llm-polish-provider">
+                <option value="gemini">Gemini Flash (cloud)</option>
+                <option value="anthropic">Claude Haiku (cloud)</option>
+                <option value="ollama">Ollama (local)</option>
+              </select>
+            </div>
+
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Model</span>
+              <input type="text" id="input-llm-polish-model" placeholder="gemini-2.5-flash" />
+              <p class="hint" id="hint-llm-polish-model">Examples: gemini-2.5-flash, claude-haiku-4-5, gemma3:4b</p>
+            </div>
+
+            <div class="field" id="field-llm-polish-key" style="margin-bottom: 8px;">
+              <span class="field-label">API Key</span>
+              <div class="input-group">
+                <input type="password" id="input-llm-polish-key" placeholder="Enter API key..." autocomplete="off" />
+                <button id="btn-toggle-llm-polish-key" type="button" class="icon-btn small" title="Show/Hide">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="field" id="field-llm-polish-ollama-url" style="margin-bottom: 8px; display:none;">
+              <span class="field-label">Ollama URL</span>
+              <input type="text" id="input-llm-polish-ollama-url" placeholder="http://localhost:11434" />
+            </div>
+
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Timeout (ms)</span>
+              <input type="number" id="input-llm-polish-timeout" min="300" max="10000" step="100" placeholder="1500" />
+              <p class="hint">If the LLM takes longer than this, the original Soniox translation stays.</p>
+            </div>
+
+            <div class="field">
+              <span class="field-label">Tone & Persona Instructions</span>
+              <textarea id="input-llm-polish-instructions" rows="4" placeholder="e.g. Translate in a formal Vietnamese business register. Keep English technical terms unchanged. Address the listener as 'quý vị'. Do not use slang."></textarea>
+              <p class="hint">Free-form system prompt — describe tone, register, persona, terminology rules.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab: Display -->

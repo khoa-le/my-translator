@@ -8,7 +8,7 @@ Step-by-step guide to install and use **My Translator** on Windows 10/11.
 
 - Windows 10 or later (x64 or ARM64)
 - [Soniox](https://soniox.com) API key (pay-per-use, ~$0.12/hour)
-- **TTS narration** (optional): Edge TTS (free, no API key) or premium providers. See [TTS Guide](tts_guide.md)
+- **TTS narration** (optional): See [TTS Guide](tts_guide.md) for provider options (Edge TTS is free, no API key)
 
 ---
 
@@ -95,28 +95,27 @@ Click **Save & Close** when done.
 
 ## Step 5 — Enable TTS Narration (Optional)
 
-Want translations **read aloud**? Enable TTS narration:
+Want translations **read aloud**? Three TTS providers are available:
 
-1. In Settings, scroll to **TTS Narration** section
-2. Check **"Enable narration (read translations aloud)"**
+| Provider | Cost | Quality | Setup |
+|----------|------|---------|-------|
+| 🎙️ **Edge TTS** | Free | Natural | None |
+| 🌐 **Google Chirp 3 HD** | Free 1M chars/mo | Near-human | Google Cloud API key |
+| ✨ **ElevenLabs** | ~$5/mo+ | Premium | ElevenLabs API key |
 
-![Settings — TTS disabled](user_manual/mytrans_setting_2.png)
+### Quick setup (Edge TTS — free):
 
-3. Enter your **ElevenLabs API key**
-4. Choose a **voice** (2 female, 2 male — all support Vietnamese)
-5. Click **Save & Close**
+1. Settings → **TTS** tab → Provider: **Edge TTS**
+2. Choose a voice → **Save & Close**
+3. On the main screen, click the **TTS** button (or `Ctrl+T`) to enable
 
-![Settings — TTS enabled with API key and voice](user_manual/mytrans_setting_3.png)
+### For Google or ElevenLabs:
 
-> 💡 **Where to get an ElevenLabs API key?**
-> 1. Go to [elevenlabs.io](https://elevenlabs.io) → create an account
-> 2. Subscribe to the **Starter plan** ($5/month, ~60 min of TTS)
-> 3. Go to **Developers → API Keys** → create a key with "Text to Speech" access
+See [TTS Guide](tts_guide.md) for step-by-step API key instructions.
 
-![ElevenLabs — Subscription plan](user_manual/mytrans_key_2.png)
-![ElevenLabs — Create API key](user_manual/mytrans_key_3.png)
+> ⚠️ **Windows: use headphones in one-way mode.** System-audio capture on Windows currently picks up the app's own TTS output, which can cause a feedback loop (TTS gets recaptured and re-translated). Headphones avoid this. Two-way mode disables TTS automatically, so this only affects one-way mode.
 
-> 💡 TTS is optional. If disabled, the app works exactly like before — transcript & translate only.
+> 💡 TTS is **OFF by default** on each launch — toggle with the TTS button or `Ctrl+T`. If you don't want it, the app works exactly the same — transcript & translate only.
 
 ---
 
@@ -149,7 +148,13 @@ If TTS is enabled, you can toggle it on/off with the **TTS** button or `Ctrl+T`.
 | `Ctrl+Enter` | Start / Stop |
 | `Ctrl+,` | Open Settings |
 | `Esc` | Close Settings |
+| `Ctrl+1` | Switch to System Audio |
+| `Ctrl+2` | Switch to Microphone |
+| `Ctrl+3` | Switch to Both (System + Mic) |
 | `Ctrl+T` | Toggle TTS narration |
+| `Ctrl+M` | Minimize window |
+| `Ctrl+P` | Toggle Always-on-Top (pin) |
+| `Ctrl+D` | Toggle Compact mode |
 
 ---
 

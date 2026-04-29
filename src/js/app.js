@@ -6,6 +6,7 @@
 import { settingsManager } from './settings.js';
 import { TranscriptUI } from './ui.js';
 import { sonioxClient } from './soniox.js';
+import { llmPolishClient } from './llm-polish.js';
 import { elevenLabsTTS } from './elevenlabs-tts.js';
 import { googleTTS } from './google-tts.js';
 import { edgeTTSRust } from './edge-tts.js';
@@ -380,19 +381,57 @@ class App {
             this._addGeneralRow('', '');
         });
 
+        // LLM Revise: provider switch + show/hide key
+        document.getElementById('select-llm-polish-provider')?.addEventListener('change', (e) => {
+            // Clear model so _updateLlmPolishProviderUI repopulates with the
+            // recommended default for the new provider.
+            const modelInput = document.getElementById('input-llm-polish-model');
+            if (modelInput) modelInput.value = '';
+            this._updateLlmPolishProviderUI(e.target.value);
+        });
+        document.getElementById('btn-toggle-llm-polish-key')?.addEventListener('click', () => {
+            const inp = document.getElementById('input-llm-polish-key');
+            if (!inp) return;
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        });
+
         // TTS toggle button in overlay
         document.getElementById('btn-tts').addEventListener('click', () => {
             this._toggleTTS();
         });
 
         // Wire Soniox callbacks
+        // Pair finalized originals with translations so the LLM polish step has
+        // ground-truth source text. Soniox typically emits the original before
+        // its translation, so a small FIFO is enough.
+        this._pendingOriginals = [];
+
         sonioxClient.onOriginal = (text, speaker, language) => {
             this.transcriptUI.addOriginal(text, speaker, language);
+            this._pendingOriginals.push({ text, language });
+            // Cap to avoid unbounded growth if translations are dropped.
+            if (this._pendingOriginals.length > 8) this._pendingOriginals.shift();
         };
 
         sonioxClient.onTranslation = (text) => {
-            this.transcriptUI.addTranslation(text);
+            const sourceMeta = this._pendingOriginals.shift() || {};
+            const s = settingsManager.get();
+            const polishOn = this._polishActive(s);
+            const mode = s.llm_polish_display_mode || 'replace';
+
+            // Wait mode: don't render the draft. Hold rendering until polish
+            // resolves (or fails/timeouts) so the line never visibly changes.
+            if (polishOn && mode === 'wait') {
+                this._polishWaitAndRender({ draft: text, sourceMeta });
+                return;
+            }
+
+            // Replace + Append both render the Soniox draft immediately.
+            const seg = this.transcriptUI.addTranslation(text);
             this._speakIfEnabled(text);
+            if (polishOn) {
+                this._maybePolish({ seg, draft: text, sourceMeta, mode });
+            }
         };
 
         sonioxClient.onProvisional = (text, speaker, language) => {
@@ -632,6 +671,50 @@ class App {
             providerSelect.value = s.tts_provider || 'edge';
             this._updateTTSProviderUI(providerSelect.value);
         }
+
+        // LLM Revise
+        const llmEnabled = document.getElementById('check-llm-polish-enabled');
+        if (llmEnabled) llmEnabled.checked = !!s.llm_polish_enabled;
+        const llmProvider = document.getElementById('select-llm-polish-provider');
+        if (llmProvider) {
+            llmProvider.value = s.llm_polish_provider || 'gemini';
+            this._updateLlmPolishProviderUI(llmProvider.value);
+        }
+        const llmModel = document.getElementById('input-llm-polish-model');
+        if (llmModel) llmModel.value = s.llm_polish_model || 'gemini-2.5-flash';
+        const llmKey = document.getElementById('input-llm-polish-key');
+        if (llmKey) llmKey.value = s.llm_polish_api_key || '';
+        const llmOllamaUrl = document.getElementById('input-llm-polish-ollama-url');
+        if (llmOllamaUrl) llmOllamaUrl.value = s.llm_polish_ollama_url || 'http://localhost:11434';
+        const llmTimeout = document.getElementById('input-llm-polish-timeout');
+        if (llmTimeout) llmTimeout.value = s.llm_polish_timeout_ms || 1500;
+        const llmInstr = document.getElementById('input-llm-polish-instructions');
+        if (llmInstr) llmInstr.value = s.llm_polish_instructions || '';
+        const llmMode = document.getElementById('select-llm-polish-display-mode');
+        if (llmMode) llmMode.value = s.llm_polish_display_mode || 'replace';
+    }
+
+    _updateLlmPolishProviderUI(provider) {
+        const keyField = document.getElementById('field-llm-polish-key');
+        const ollamaField = document.getElementById('field-llm-polish-ollama-url');
+        const modelInput = document.getElementById('input-llm-polish-model');
+        const modelHint = document.getElementById('hint-llm-polish-model');
+        if (keyField) keyField.style.display = provider === 'ollama' ? 'none' : '';
+        if (ollamaField) ollamaField.style.display = provider === 'ollama' ? '' : 'none';
+        if (modelInput && !modelInput.value) {
+            modelInput.value = {
+                gemini: 'gemini-2.5-flash',
+                anthropic: 'claude-haiku-4-5',
+                ollama: 'gemma3:4b',
+            }[provider] || '';
+        }
+        if (modelHint) {
+            modelHint.textContent = {
+                gemini: 'Examples: gemini-2.5-flash, gemini-2.5-flash-lite',
+                anthropic: 'Examples: claude-haiku-4-5, claude-sonnet-4-6',
+                ollama: 'Examples: gemma3:4b, llama3.2:3b, qwen2.5:3b',
+            }[provider] || '';
+        }
     }
 
     async _saveSettingsFromForm() {
@@ -697,6 +780,16 @@ class App {
         settings.google_tts_voice = document.getElementById('select-google-voice')?.value || 'vi-VN-Chirp3-HD-Aoede';
         settings.google_tts_speed = parseFloat(document.getElementById('range-google-speed')?.value || 1.0);
         settings.tts_enabled = false;
+
+        // LLM Revise
+        settings.llm_polish_enabled = document.getElementById('check-llm-polish-enabled')?.checked || false;
+        settings.llm_polish_provider = document.getElementById('select-llm-polish-provider')?.value || 'gemini';
+        settings.llm_polish_model = document.getElementById('input-llm-polish-model')?.value.trim() || '';
+        settings.llm_polish_api_key = document.getElementById('input-llm-polish-key')?.value.trim() || '';
+        settings.llm_polish_ollama_url = document.getElementById('input-llm-polish-ollama-url')?.value.trim() || 'http://localhost:11434';
+        settings.llm_polish_timeout_ms = parseInt(document.getElementById('input-llm-polish-timeout')?.value || 1500, 10);
+        settings.llm_polish_instructions = document.getElementById('input-llm-polish-instructions')?.value || '';
+        settings.llm_polish_display_mode = document.getElementById('select-llm-polish-display-mode')?.value || 'replace';
 
         try {
             await settingsManager.save(settings);
@@ -905,6 +998,110 @@ class App {
         }
     }
 
+    /**
+     * True iff polish is enabled AND the chosen provider has the credentials
+     * it needs. Used to decide upfront whether to take the wait-mode path.
+     */
+    _polishActive(s) {
+        if (!s?.llm_polish_enabled) return false;
+        const provider = s.llm_polish_provider || 'gemini';
+        if (provider !== 'ollama' && !s.llm_polish_api_key) return false;
+        return true;
+    }
+
+    /**
+     * Build the polish call config from current settings.
+     */
+    _buildPolishCall({ draft, sourceMeta }) {
+        const s = settingsManager.get();
+        const provider = s.llm_polish_provider || 'gemini';
+        const providerCfg = {
+            provider,
+            model: s.llm_polish_model || '',
+            apiKey: s.llm_polish_api_key || '',
+            ollamaUrl: s.llm_polish_ollama_url || 'http://localhost:11434',
+            timeoutMs: s.llm_polish_timeout_ms || 1500,
+        };
+        return {
+            args: {
+                source: sourceMeta?.text || '',
+                draft,
+                sourceLang: sourceMeta?.language || s.source_language || 'auto',
+                targetLang: s.target_language || 'vi',
+                instructions: s.llm_polish_instructions || '',
+                providerCfg,
+            },
+            providerCfg,
+        };
+    }
+
+    /**
+     * Replace + Append modes. The Soniox draft is already on screen; this
+     * runs in the background. On success, swap (replace mode) or attach
+     * (append mode). On failure / timeout / empty / unchanged, leave the
+     * draft in place — the user sees no flicker.
+     */
+    _maybePolish({ seg, draft, sourceMeta, mode }) {
+        if (!seg || !draft) return;
+        const { args, providerCfg } = this._buildPolishCall({ draft, sourceMeta });
+        const t0 = performance.now();
+        console.info('[LlmPolish:' + mode + '] →', providerCfg.provider, providerCfg.model, '| draft:', draft);
+        llmPolishClient.polish(args).then((polished) => {
+            const dt = Math.round(performance.now() - t0);
+            if (!polished) {
+                console.info(`[LlmPolish:${mode}] ← null in ${dt}ms (timeout/error/empty), keeping draft`);
+                return;
+            }
+            if (polished === draft) {
+                console.info(`[LlmPolish:${mode}] ← unchanged in ${dt}ms`);
+                return;
+            }
+            console.info(`[LlmPolish:${mode}] ← polished in ${dt}ms:`, polished);
+            if (mode === 'append') {
+                this.transcriptUI.addPolished(seg, polished);
+            } else {
+                this.transcriptUI.updateTranslation(seg, polished);
+            }
+        }).catch(() => { /* already logged in client */ });
+    }
+
+    /**
+     * Wait mode. Don't render the Soniox draft yet — hold the line until
+     * polish resolves (or times out / fails), then render whichever text we
+     * end up with. No flicker, but adds polish-latency to every line.
+     *
+     * To preserve line order when several translations finish back-to-back,
+     * each call chains onto the previous one's promise. This serializes the
+     * rendering, not the network calls — polish requests still go out
+     * concurrently — so worst case the rendered order is delayed but never
+     * scrambled.
+     */
+    _polishWaitAndRender({ draft, sourceMeta }) {
+        const { args, providerCfg } = this._buildPolishCall({ draft, sourceMeta });
+        const t0 = performance.now();
+        console.info('[LlmPolish:wait] →', providerCfg.provider, providerCfg.model, '| draft:', draft);
+        const polishPromise = llmPolishClient.polish(args).catch(() => null);
+        // Chain rendering onto the previous wait-mode promise so order is
+        // preserved across rapid-fire translations.
+        const prev = this._waitChain || Promise.resolve();
+        this._waitChain = prev.then(async () => {
+            const polished = await polishPromise;
+            const dt = Math.round(performance.now() - t0);
+            const finalText = polished && polished !== draft ? polished : draft;
+            if (!polished) {
+                console.info(`[LlmPolish:wait] ← null in ${dt}ms, rendering draft`);
+            } else if (polished === draft) {
+                console.info(`[LlmPolish:wait] ← unchanged in ${dt}ms`);
+            } else {
+                console.info(`[LlmPolish:wait] ← polished in ${dt}ms:`, polished);
+            }
+            this.transcriptUI.addTranslation(finalText);
+            this._speakIfEnabled(finalText);
+        }).catch((err) => {
+            console.warn('[LlmPolish:wait] render chain error:', err);
+        });
+    }
+
     // ─── Source Control ────────────────────────────────────
 
     _setSource(source) {
@@ -1017,6 +1214,11 @@ class App {
         // Connect to Soniox
         console.log('[App] Connecting to Soniox...');
         this._updateStatus('connecting');
+        // Fresh session: drop polish style examples and any unpaired originals
+        // from the previous run.
+        llmPolishClient.reset();
+        this._pendingOriginals = [];
+        this._waitChain = null;
         sonioxClient.connect({
             apiKey: settings.soniox_api_key,
             sourceLanguage: settings.source_language,

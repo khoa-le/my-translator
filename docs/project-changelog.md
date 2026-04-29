@@ -7,6 +7,30 @@ Format: `## v<version> - <YYYY-MM-DD>` followed by content until the next `## v`
 
 ---
 
+## v0.6.0 - 2026-04-29
+
+### New Features
+
+#### LLM Revise (optional translation polish)
+- New **LLM Revise** step that post-processes each Soniox translation through a light LLM to match a user-defined tone, persona, or terminology
+- **3 providers**: Gemini Flash (cloud), Claude Haiku (cloud), Ollama (local)
+- **3 display modes**:
+  - *Replace* (default) — Soniox draft renders instantly, polished version swaps in when ready
+  - *Wait* — render only after polish completes (cleaner, slightly higher latency)
+  - *Append* — show both draft and polished versions
+- Free-form **tone & persona instructions** used as the system prompt (e.g. "formal Vietnamese business register, keep English technical terms")
+- Per-call timeout falls back to the original Soniox draft if the LLM is slow or unavailable — never blocks the pipeline
+- LLM also sees the source line so it can correct meaning errors in the draft, not just restyle
+
+### Documentation
+
+- Install guides: fix macOS Apple-Silicon-vs-Intel contradiction in Requirements
+- Install guides: rewrite Windows Step 5 to cover all 3 TTS providers (was ElevenLabs-only)
+- Install guides: add missing keyboard shortcuts (Cmd/Ctrl + 3 / M / P / D) on both platforms
+- Install guides: add Windows-headphones note for one-way TTS feedback
+
+---
+
 ## v0.5.3 - 2026-04-10
 
 ### Bug Fixes

@@ -6,7 +6,7 @@ Hướng dẫn từng bước cài đặt và sử dụng **My Translator** trê
 
 ## Yêu cầu
 
-- macOS 13 trở lên (Apple Silicon — chip M1/M2/M3/M4)
+- macOS 13 trở lên (Apple Silicon hoặc Intel)
 - **Chế độ Cloud**: API key của [Soniox](https://soniox.com) (trả theo dùng, ~$0.12/giờ)
 - **Chế độ Local**: ~5 GB dung lượng ổ cứng (cho mô hình AI, tải một lần)
 - **Thuyết minh TTS** (tuỳ chọn): Xem [Hướng dẫn TTS](tts_guide_vi.md)
@@ -137,7 +137,11 @@ Xem [Hướng dẫn TTS](tts_guide_vi.md) để biết cách lấy API key từn
 | `Esc` | Đóng Settings |
 | `⌘ 1` | Chuyển sang System Audio |
 | `⌘ 2` | Chuyển sang Microphone |
+| `⌘ 3` | Chuyển sang Both (System + Mic) |
 | `⌘ T` | Bật/tắt thuyết minh TTS |
+| `⌘ M` | Thu nhỏ cửa sổ |
+| `⌘ P` | Bật/tắt Always-on-Top (ghim) |
+| `⌘ D` | Bật/tắt chế độ Compact |
 
 ---
 

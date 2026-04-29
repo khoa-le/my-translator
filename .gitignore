@@ -61,3 +61,6 @@ scripts/test_*.py
 .private/
 GEMINI.md
 CLAUDE.md
+.gitnexus
+.claude/
+AGENTS.md

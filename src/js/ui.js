@@ -85,7 +85,10 @@ export class TranscriptUI {
     }
 
     /**
-     * Apply translation to the oldest untranslated segment
+     * Apply translation to the oldest untranslated segment.
+     * Returns the segment that received the translation (or the new one), so
+     * callers can pass it back to updateTranslation() later for in-place edits
+     * (e.g. an LLM-polished version replacing the streaming draft).
      */
     addTranslation(text) {
         const seg = this.segments.find(s => s.status === 'original');
@@ -100,18 +103,57 @@ export class TranscriptUI {
                 logSeg.translation = text;
                 logSeg.status = 'translated';
             }
-        } else {
-            const newSeg = {
-                original: '',
-                translation: text,
-                status: 'translated',
-                speaker: null,
-                createdAt: Date.now(),
-            };
-            this.segments.push(newSeg);
-            this.sessionLog.push({ ...newSeg });
+            this._render();
+            return seg;
         }
+        const newSeg = {
+            original: '',
+            translation: text,
+            status: 'translated',
+            speaker: null,
+            createdAt: Date.now(),
+        };
+        this.segments.push(newSeg);
+        this.sessionLog.push({ ...newSeg });
         this._render();
+        return newSeg;
+    }
+
+    /**
+     * Append-mode counterpart to updateTranslation: keep the original Soniox
+     * draft on screen, but attach the polished version as a second line under
+     * it. Used when display mode is "append".
+     */
+    addPolished(seg, polishedText) {
+        if (!seg || !polishedText) return;
+        const stillVisible = this.segments.includes(seg);
+        if (stillVisible) seg.polished = polishedText;
+        const logSeg = this.sessionLog.find(s => s.createdAt === seg.createdAt);
+        if (logSeg) logSeg.polished = polishedText;
+        if (stillVisible) this._render();
+    }
+
+    /**
+     * Replace the translation on a segment previously returned from
+     * addTranslation. Used when an async LLM polish call completes after the
+     * draft has already been rendered. Silently no-ops if the segment has
+     * already been trimmed out of the display buffer.
+     */
+    updateTranslation(seg, newText) {
+        if (!seg || !newText) return;
+        // Match by createdAt so we still update sessionLog even if the segment
+        // was trimmed from the display buffer.
+        const stillVisible = this.segments.includes(seg);
+        if (stillVisible) {
+            seg.translation = newText;
+            seg.status = 'translated';
+        }
+        const logSeg = this.sessionLog.find(s => s.createdAt === seg.createdAt);
+        if (logSeg) {
+            logSeg.translation = newText;
+            logSeg.status = 'translated';
+        }
+        if (stillVisible) this._render();
     }
 
     /**
@@ -389,8 +431,15 @@ export class TranscriptUI {
 
             if (seg.status === 'translated' && seg.translation) {
                 const confidenceClass = (seg.confidence !== null && seg.confidence < 0.7) ? ' low-confidence' : '';
+                const hasPolish = !!seg.polished;
+                // When a polished version sits beneath, dim the draft so the
+                // reader's eye lands on the polished line.
+                const draftStyle = hasPolish ? ' style="opacity:0.55;font-style:italic;"' : '';
                 html += `<div class="seg-block">`;
-                html += `<div class="seg-translated${confidenceClass}">${this._esc(seg.translation)}</div>`;
+                html += `<div class="seg-translated${confidenceClass}"${draftStyle}>${this._esc(seg.translation)}</div>`;
+                if (hasPolish) {
+                    html += `<div class="seg-polished" style="margin-top:2px;">${this._esc(seg.polished)}</div>`;
+                }
                 html += `</div>`;
             }
             // Skip 'original' segments in single mode — wait for translation
@@ -437,10 +486,15 @@ export class TranscriptUI {
 
             if (seg.status === 'translated' && seg.translation) {
                 const confidenceClass = (seg.confidence !== null && seg.confidence < 0.7) ? ' low-confidence' : '';
+                const hasPolish = !!seg.polished;
+                const draftStyle = hasPolish ? ' style="opacity:0.55;font-style:italic;"' : '';
                 srcHtml += speakerHtml + langHtml;
                 srcHtml += `<div class="seg-text">${this._esc(seg.original || '')}</div>`;
                 tgtHtml += speakerHtml ? '<div class="speaker-label">&nbsp;</div>' : '';
-                tgtHtml += `<div class="seg-text${confidenceClass}">${this._esc(seg.translation)}</div>`;
+                tgtHtml += `<div class="seg-text${confidenceClass}"${draftStyle}>${this._esc(seg.translation)}</div>`;
+                if (hasPolish) {
+                    tgtHtml += `<div class="seg-text seg-polished" style="margin-top:2px;">${this._esc(seg.polished)}</div>`;
+                }
             } else if (seg.status === 'original' && seg.original) {
                 srcHtml += speakerHtml + langHtml;
                 srcHtml += `<div class="seg-text pending">${this._esc(seg.original)}</div>`;
