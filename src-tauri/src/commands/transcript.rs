@@ -34,21 +34,28 @@ pub fn save_transcript(app: AppHandle, content: String) -> Result<String, String
 /// Open the transcript directory in the system file manager
 /// macOS: Finder, Windows: Explorer
 #[tauri::command]
+#[allow(unused_variables)]
 pub fn open_transcript_dir(app: AppHandle) -> Result<(), String> {
-    let dir = transcript_dir(&app)?;
+    #[cfg(target_os = "ios")]
+    return Err("Transcript directory not available on iOS".into());
 
-    #[cfg(target_os = "macos")]
-    let cmd = "open";
-    #[cfg(target_os = "windows")]
-    let cmd = "explorer";
-    #[cfg(target_os = "linux")]
-    let cmd = "xdg-open";
+    #[cfg(not(target_os = "ios"))]
+    {
+        let dir = transcript_dir(&app)?;
 
-    std::process::Command::new(cmd)
-        .arg(&dir)
-        .spawn()
-        .map_err(|e| format!("Failed to open transcript dir: {}", e))?;
-    Ok(())
+        #[cfg(target_os = "macos")]
+        let cmd = "open";
+        #[cfg(target_os = "windows")]
+        let cmd = "explorer";
+        #[cfg(target_os = "linux")]
+        let cmd = "xdg-open";
+
+        std::process::Command::new(cmd)
+            .arg(&dir)
+            .spawn()
+            .map_err(|e| format!("Failed to open transcript dir: {}", e))?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize)]

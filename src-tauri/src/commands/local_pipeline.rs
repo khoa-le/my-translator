@@ -30,12 +30,16 @@ fn chrono_now() -> String {
 
 /// Start the local translation pipeline (Python sidecar)
 #[tauri::command]
+#[allow(unreachable_code, unused_variables)]
 pub fn start_local_pipeline(
     source_lang: String,
     target_lang: String,
     channel: Channel<String>,
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    return Err("Local MLX pipeline is not supported on iOS".into());
+
     log_to_file(&format!("start_local_pipeline called: src={}, tgt={}", source_lang, target_lang));
 
     // Send status to frontend
@@ -177,10 +181,14 @@ pub fn start_local_pipeline(
 
 /// Send audio data to the local pipeline stdin
 #[tauri::command]
+#[allow(unreachable_code, unused_variables)]
 pub fn send_audio_to_pipeline(
     data: Vec<u8>,
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    return Err("Local MLX pipeline is not supported on iOS".into());
+
     let mut proc = state.process.lock().map_err(|e| e.to_string())?;
     if let Some(ref mut child) = *proc {
         if let Some(ref mut stdin) = child.stdin {
@@ -196,9 +204,13 @@ pub fn send_audio_to_pipeline(
 
 /// Stop the local pipeline
 #[tauri::command]
+#[allow(unreachable_code, unused_variables)]
 pub fn stop_local_pipeline(
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    return Err("Local MLX pipeline is not supported on iOS".into());
+
     log_to_file("stop_local_pipeline called");
     stop_local_pipeline_inner(&state);
     Ok(())
@@ -221,7 +233,11 @@ fn stop_local_pipeline_inner(state: &LocalPipelineState) {
 
 /// Check if MLX setup is complete
 #[tauri::command]
+#[allow(unreachable_code)]
 pub fn check_mlx_setup() -> Result<String, String> {
+    #[cfg(target_os = "ios")]
+    return Err("Local MLX is not supported on iOS".into());
+
     let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/phucnt".to_string());
     let marker = format!("{}/Library/Application Support/My Translator/mlx-env/.setup_complete", home);
     let venv_python = format!("{}/Library/Application Support/My Translator/mlx-env/bin/python3", home);
@@ -237,9 +253,13 @@ pub fn check_mlx_setup() -> Result<String, String> {
 
 /// Run MLX setup (install venv + packages + download models)
 #[tauri::command]
+#[allow(unreachable_code, unused_variables)]
 pub fn run_mlx_setup(
     channel: Channel<String>,
 ) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    return Err("Local MLX setup is not supported on iOS".into());
+
     log_to_file("run_mlx_setup called");
 
     // Find setup script

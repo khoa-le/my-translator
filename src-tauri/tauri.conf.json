@@ -47,6 +47,10 @@
       "frameworks": [],
       "minimumSystemVersion": "13.0"
     },
+    "iOS": {
+      "developmentTeam": "8TVC9U8H52",
+      "minimumSystemVersion": "16.0"
+    },
     "createUpdaterArtifacts": true
   },
   "plugins": {

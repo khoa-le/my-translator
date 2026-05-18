@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
   <title>My Translator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,7 +32,7 @@
         </div>
 
         <div class="source-controls">
-          <button id="btn-source-system" class="source-btn active" title="System Audio (⌘1)">
+          <button id="btn-source-system" class="source-btn active desktop-only" title="System Audio (⌘1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
@@ -46,7 +46,7 @@
               <line x1="8" y1="23" x2="16" y2="23" />
             </svg>
           </button>
-          <button id="btn-source-both" class="source-btn" title="System + Mic (⌘3)">
+          <button id="btn-source-both" class="source-btn desktop-only" title="System + Mic (⌘3)">
             <svg width="16" height="14" viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="9 6 5 9 2 9 2 15 5 15 9 18 9 6" />
               <path d="M12.5 9.5a3 3 0 0 1 0 5" />
@@ -92,7 +92,7 @@
             </svg>
           </button>
 
-          <button id="btn-open-transcripts" class="icon-btn" title="Open saved transcripts folder">
+          <button id="btn-open-transcripts" class="icon-btn desktop-only" title="Open saved transcripts folder">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
@@ -106,7 +106,7 @@
           </button>
         </div>
 
-        <button id="btn-compact" class="icon-btn" title="Compact mode — hide control bar">
+        <button id="btn-compact" class="icon-btn desktop-only" title="Compact mode — hide control bar">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="4 14 10 14 10 20" />
             <polyline points="20 10 14 10 14 4" />
@@ -115,20 +115,20 @@
           </svg>
         </button>
 
-        <button id="btn-pin" class="icon-btn active" title="Pin on top (always visible)">
+        <button id="btn-pin" class="icon-btn active desktop-only" title="Pin on top (always visible)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 17v5" />
             <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76z" />
           </svg>
         </button>
 
-        <button id="btn-minimize" class="icon-btn" title="Minimize to taskbar">
+        <button id="btn-minimize" class="icon-btn desktop-only" title="Minimize to taskbar">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
 
-        <button id="btn-close" class="icon-btn close-btn" title="Close">
+        <button id="btn-close" class="icon-btn close-btn desktop-only" title="Close">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -174,7 +174,7 @@
     </div>
 
     <!-- Resize Handle -->
-    <div id="resize-handle"></div>
+    <div id="resize-handle" class="desktop-only"></div>
   </div>
 
   <!-- ═══════════════════ SETTINGS VIEW ═══════════════════ -->
