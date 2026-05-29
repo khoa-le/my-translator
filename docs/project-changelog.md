@@ -7,6 +7,30 @@ Format: `## v<version> - <YYYY-MM-DD>` followed by content until the next `## v`
 
 ---
 
+## v0.7.0 - 2026-05-29
+
+### New Features
+
+#### iOS Platform Support
+- Full iOS app build — runs on iPhone simulator and physical devices
+- Light mobile UI theme (cream background + purple accents) activated automatically on iOS
+- Microphone-only capture on iOS (system audio and "both" sources are desktop-only)
+- WKWebView-compatible PCM audio playback for TTS on iOS
+- Settings, transcript history, and all core translation flows work on mobile
+
+### Technical
+- Cross-compilation setup for `aarch64-apple-ios` and `aarch64-apple-ios-sim`
+- iOS-specific capability manifest (`capabilities/ios.json`) with minimal permissions
+- Desktop-only plugins (updater, process) gated behind `#[cfg(desktop)]`
+- Added `AudioToolbox`, `AVFoundation`, and `CoreAudio` framework links for `cpal` on iOS
+
+### Documentation
+- New `FAQs.md` — common questions for end users
+- New `Getting-Started.md` — build guide for macOS from source
+- `CLAUDE.md` updated with iOS dev commands, gotchas, and platform gating patterns
+
+---
+
 ## v0.6.0 - 2026-04-29
 
 ### New Features
