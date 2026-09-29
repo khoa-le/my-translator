@@ -7,6 +7,7 @@ import { settingsManager } from './settings.js';
 import { TranscriptUI } from './ui.js';
 import { sonioxClient } from './soniox.js';
 import { llmPolishClient } from './llm-polish.js';
+import { generateMinutesGemini } from './meeting-minutes.js';
 import { elevenLabsTTS } from './elevenlabs-tts.js';
 import { googleTTS } from './google-tts.js';
 import { edgeTTSRust } from './edge-tts.js';
@@ -716,6 +717,14 @@ class App {
         if (llmInstr) llmInstr.value = s.llm_polish_instructions || '';
         const llmMode = document.getElementById('select-llm-polish-display-mode');
         if (llmMode) llmMode.value = s.llm_polish_display_mode || 'replace';
+
+        // Meeting mode
+        document.getElementById('check-meeting-mode').checked = !!s.meeting_mode_enabled;
+        document.getElementById('select-minutes-engine').value = s.minutes_engine || 'gemini';
+        document.getElementById('input-minutes-email-to').value = s.minutes_email_to || '';
+        document.getElementById('input-smtp-username').value = s.smtp_username || '';
+        document.getElementById('input-smtp-password').value = s.smtp_password || '';
+        document.getElementById('input-claude-code-prompt').value = s.claude_code_prompt || '';
     }
 
     _updateLlmPolishProviderUI(provider) {
@@ -814,6 +823,14 @@ class App {
         settings.llm_polish_timeout_ms = parseInt(document.getElementById('input-llm-polish-timeout')?.value || 1500, 10);
         settings.llm_polish_instructions = document.getElementById('input-llm-polish-instructions')?.value || '';
         settings.llm_polish_display_mode = document.getElementById('select-llm-polish-display-mode')?.value || 'replace';
+
+        // Meeting mode
+        settings.meeting_mode_enabled = document.getElementById('check-meeting-mode').checked;
+        settings.minutes_engine = document.getElementById('select-minutes-engine').value;
+        settings.minutes_email_to = document.getElementById('input-minutes-email-to').value.trim();
+        settings.smtp_username = document.getElementById('input-smtp-username').value.trim();
+        settings.smtp_password = document.getElementById('input-smtp-password').value.trim();
+        settings.claude_code_prompt = document.getElementById('input-claude-code-prompt').value.trim();
 
         try {
             await settingsManager.save(settings);
@@ -1592,8 +1609,12 @@ class App {
 
         // Auto-save on stop — use full sessionLog (not trimmed display buffer)
         if (this.transcriptUI.hasSessionContent()) {
-            await this._saveTranscriptFile();
+            const transcript = await this._saveTranscriptFile();
             this.transcriptUI.clearSession();
+            // Runs in the background — can take a minute with Claude Code
+            if (transcript && settingsManager.get().meeting_mode_enabled) {
+                this._sendMeetingMinutes(transcript);
+            }
         }
 
         // Reset session tracking
@@ -1647,6 +1668,35 @@ class App {
         } catch (err) {
             console.error('Failed to save transcript:', err);
             this._showToast('Failed to save transcript', 'error');
+        }
+        return content;
+    }
+
+    async _sendMeetingMinutes(transcript) {
+        const s = settingsManager.get();
+        this._showToast('Generating meeting minutes…', 'success');
+        try {
+            let body;
+            if (s.minutes_engine === 'claude_code') {
+                const files = await invoke('generate_minutes_claude_code', { transcript });
+                body = files.map(f => f.content).join('\n\n---\n\n');
+            } else {
+                if (s.llm_polish_provider !== 'gemini' || !s.llm_polish_api_key) {
+                    throw new Error('Gemini minutes need a Gemini provider + API key in LLM Revise settings');
+                }
+                body = await generateMinutesGemini({
+                    transcript,
+                    apiKey: s.llm_polish_api_key,
+                    model: s.llm_polish_model,
+                    targetLang: s.target_language || 'vi',
+                });
+            }
+            const subject = `Meeting minutes — ${new Date().toLocaleString()}`;
+            const to = await invoke('send_minutes_email', { subject, body });
+            this._showToast(`Minutes emailed to ${to}`, 'success');
+        } catch (err) {
+            console.error('Meeting minutes failed:', err);
+            this._showToast(`Meeting minutes failed: ${err?.message || err}`, 'error');
         }
     }
 

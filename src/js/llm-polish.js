@@ -125,7 +125,7 @@ export class LlmPolishClient {
 
     // ─── Provider calls ──────────────────────────────────────
 
-    async _callGemini({ providerCfg, systemPrompt, userPrompt, signal }) {
+    async _callGemini({ providerCfg, systemPrompt, userPrompt, signal, maxTokens = 256 }) {
         const { apiKey, model } = providerCfg;
         if (!apiKey) throw new Error('Gemini API key is missing');
         const m = model || 'gemini-2.5-flash';
@@ -135,7 +135,7 @@ export class LlmPolishClient {
             contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
             generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 256,
+                maxOutputTokens: maxTokens,
                 responseMimeType: 'text/plain',
             },
         };

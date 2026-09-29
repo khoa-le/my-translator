@@ -69,6 +69,8 @@ pub fn run() {
             commands::local_pipeline::check_mlx_setup,
             commands::local_pipeline::run_mlx_setup,
             commands::edge_tts::edge_tts_speak,
+            commands::meeting::generate_minutes_claude_code,
+            commands::meeting::send_minutes_email,
             get_platform_info,
         ])
         .run(tauri::generate_context!())

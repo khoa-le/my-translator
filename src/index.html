@@ -544,6 +544,48 @@
             </div>
           </div>
         </div>
+
+        <!-- Meeting mode: generate + email minutes when the session stops -->
+        <div class="settings-section" id="section-meeting">
+          <label class="checkbox-option">
+            <input type="checkbox" id="check-meeting-mode" />
+            <span class="checkbox-label">Meeting mode <span class="optional-badge">Optional</span></span>
+          </label>
+          <p class="hint" style="margin-top: 4px;">When you press Stop, the transcript is turned into meeting minutes and emailed to you.</p>
+
+          <div id="meeting-fields" style="margin-top: 10px;">
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Minutes generator</span>
+              <select id="select-minutes-engine">
+                <option value="gemini">Gemini (key &amp; model from LLM Revise)</option>
+                <option value="claude_code">Claude Code — meeting-minutes skill (desktop)</option>
+              </select>
+              <p class="hint">Claude Code runs the local <code>claude</code> CLI with your meeting-minutes skill and emails both language versions.</p>
+            </div>
+
+            <div class="field" id="field-claude-code-prompt" style="margin-bottom: 8px;">
+              <span class="field-label">Claude Code prompt</span>
+              <textarea id="input-claude-code-prompt" rows="4"></textarea>
+              <p class="hint">Sent as <code>claude -p "&lt;prompt&gt;"</code> in a folder containing <code>./transcript.md</code>. Every <code>.md</code> file it writes there is emailed. Leave empty to use the default (meeting-minutes skill).</p>
+            </div>
+
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Send to</span>
+              <input type="email" id="input-minutes-email-to" placeholder="Defaults to the Gmail address below" />
+            </div>
+
+            <div class="field" style="margin-bottom: 8px;">
+              <span class="field-label">Gmail address (sender)</span>
+              <input type="email" id="input-smtp-username" placeholder="you@gmail.com" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <span class="field-label">Gmail app password</span>
+              <input type="password" id="input-smtp-password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" />
+              <p class="hint">Create one at myaccount.google.com/apppasswords (requires 2-Step Verification). Sent via smtp.gmail.com.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab: Display -->
