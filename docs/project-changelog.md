@@ -7,6 +7,23 @@ Format: `## v<version> - <YYYY-MM-DD>` followed by content until the next `## v`
 
 ---
 
+## v0.8.0 - 2026-09-29
+
+### New Features
+
+#### Meeting Mode — minutes emailed after each session
+- New **Meeting mode** toggle (Settings → Translation). When on, pressing Stop turns the transcript into structured meeting minutes and emails them to you
+- Two minutes generators:
+  - **Gemini** — reuses the Gemini key and model from LLM Revise; minutes written in the target language
+  - **Claude Code** (desktop) — runs the local `claude` CLI with your `meeting-minutes` skill; emails both language versions
+- Editable **Claude Code prompt**; every `.md` file it writes next to `transcript.md` is included in the email
+- Email sent via Gmail SMTP (`smtp.gmail.com`) using a Gmail address + app password; recipient defaults to the sender
+
+### Technical
+- New Rust commands `generate_minutes_claude_code` and `send_minutes_email` (`lettre` with rustls)
+- Claude Code runs are kept in `app_data_dir()/minutes/<timestamp>/`
+- New settings: `meeting_mode_enabled`, `minutes_engine`, `minutes_email_to`, `smtp_username`, `smtp_password`, `claude_code_prompt`
+
 ## v0.7.0 - 2026-05-29
 
 ### New Features
