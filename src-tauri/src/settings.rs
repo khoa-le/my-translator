@@ -146,6 +146,10 @@ impl Default for Settings {
 /// Get the settings file path
 /// ~/Library/Application Support/com.personal.translator/settings.json
 fn settings_path() -> PathBuf {
+    // Android has no HOME, so dirs::config_dir() is None — use the app's private data dir
+    #[cfg(target_os = "android")]
+    let mut path = PathBuf::from("/data/data/com.personal.translator");
+    #[cfg(not(target_os = "android"))]
     let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
     path.push("com.personal.translator");
     path.push("settings.json");

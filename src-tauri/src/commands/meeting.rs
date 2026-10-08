@@ -45,7 +45,7 @@ pub async fn generate_minutes_claude_code(
     state: State<'_, SettingsState>,
     transcript: String,
 ) -> Result<Vec<MinutesFile>, String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Claude Code minutes are only available on desktop".into());
 
     let prompt = {
