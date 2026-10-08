@@ -8,17 +8,17 @@ use commands::audio::AudioState;
 use commands::local_pipeline::LocalPipelineState;
 use settings::{Settings, SettingsState};
 use std::sync::Mutex;
-#[cfg(target_os = "ios")]
+#[cfg(mobile)]
 use tauri::{Emitter, Listener};
 
 #[tauri::command]
 fn get_platform_info() -> String {
     format!(
-        r#"{{"os":"{}","arch":"{}","version":"{}","ios":{}}}"#,
+        r#"{{"os":"{}","arch":"{}","version":"{}","mobile":{}}}"#,
         std::env::consts::OS,
         std::env::consts::ARCH,
         env!("CARGO_PKG_VERSION"),
-        cfg!(target_os = "ios")
+        cfg!(mobile)
     )
 }
 
@@ -35,7 +35,7 @@ pub fn run() {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
             }
-            #[cfg(target_os = "ios")]
+            #[cfg(mobile)]
             {
                 let handle = app.handle().clone();
                 app.listen("tauri://resume", move |_| {

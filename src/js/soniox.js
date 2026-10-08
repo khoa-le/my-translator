@@ -39,10 +39,12 @@ export class SonioxClient {
         this._sessionTimer = null;
         this._keepaliveTimer = null;
         this._recentTranslations = []; // Rolling buffer of recent translations
+        this._untranslatedBuf = '';    // 'none' tokens held until a sentence end / endpoint
 
         // Callbacks
         this.onOriginal = null;       // (text, speaker, language) => {}
         this.onTranslation = null;    // (text) => {}
+        this.onUntranslated = null;   // (text) => {} — final text Soniox won't translate (already target language)
         this.onProvisional = null;    // (text, speaker, language) => {}
         this.onStatusChange = null;   // (status) => {}
         this.onError = null;          // (error) => {}
@@ -57,6 +59,7 @@ export class SonioxClient {
         this.apiKey = apiKey;
         this._config = config;
         this._intentionalDisconnect = false;
+        this._untranslatedBuf = '';
         this._reconnectAttempts = 0;
         this._recentTranslations = [];
 
@@ -309,9 +312,10 @@ export class SonioxClient {
                     translationText += token.text;
                 }
             } else if (token.translation_status === 'none') {
-                // Third-language speech in two-way mode: treat as original (untranslated)
+                // Speech already in the target language (one-way), or a third language
+                // (two-way): no translation will follow
                 if (token.is_final) {
-                    originalText += token.text;
+                    this._untranslatedBuf += token.text;
                 } else {
                     provisionalText += token.text;
                 }
@@ -329,13 +333,22 @@ export class SonioxClient {
             this.onOriginal?.(originalText, speaker, language);
         }
 
+        // Soniox finalizes tokens in small batches (often mid-word); emit untranslated
+        // text one sentence at a time so it renders as whole lines
+        if (this._untranslatedBuf.trim() && (hasEnd || /[.!?。！？]\s*$/.test(this._untranslatedBuf))) {
+            this.onOriginal?.(this._untranslatedBuf, speaker, language);
+            this.onUntranslated?.(this._untranslatedBuf);
+            this._untranslatedBuf = '';
+        }
+
         // Emit translation + store for context carryover
         if (translationText.trim()) {
             this.onTranslation?.(translationText);
             this._addToHistory(translationText);
         }
 
-        // Emit provisional text with speaker + language
+        // Emit provisional text with speaker + language (incl. buffered untranslated text)
+        provisionalText = this._untranslatedBuf + provisionalText;
         if (provisionalText.trim()) {
             this.onProvisional?.(provisionalText, speaker, language);
         } else if (originalText.trim() || translationText.trim() || hasEnd) {

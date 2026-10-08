@@ -8,7 +8,7 @@ Step-by-step guide to build **My Translator** for macOS from source code.
 
 | Tool | Minimum | Verified | Check Command |
 |------|---------|----------|---------------|
-| macOS | 13.0 (Ventura) | 26.3 (Sequoia) | `sw_vers` |
+| macOS | 13.0 (Ventura) | 26.6 (Tahoe) | `sw_vers` |
 | Rust | stable | 1.95.0 | `rustc --version` |
 | Node.js | 18+ | 24.14.1 | `node --version` |
 | npm | (bundled) | 11.8.0 | `npm --version` |
@@ -82,7 +82,7 @@ npm --version
 ## Step 4 — Clone the Repository
 
 ```bash
-git clone https://github.com/phuc-nt/my-translator.git
+git clone https://github.com/khoa-le/my-translator.git
 cd my-translator
 ```
 
@@ -119,7 +119,13 @@ npm run tauri build
 
 Outputs:
 - `.app` bundle: `src-tauri/target/release/bundle/macos/MyTranslator.app`
-- `.dmg` installer: `src-tauri/target/release/bundle/dmg/MyTranslator_0.6.0_aarch64.dmg`
+- `.dmg` installer: `src-tauri/target/release/bundle/dmg/MyTranslator_<version>_aarch64.dmg`
+
+> **No updater signing key?** `tauri.conf.json` sets `createUpdaterArtifacts: true`, which needs `TAURI_SIGNING_PRIVATE_KEY` (only CI has it). Without it the `.app` is still built, but the command ends with `Error A public key has been found, but no private key`. For a clean local build, skip the updater artifacts:
+>
+> ```bash
+> npx tauri build --bundles app,dmg -c '{"bundle":{"createUpdaterArtifacts":false}}'
+> ```
 
 ### Dev mode (hot-reload, no bundling)
 
@@ -194,34 +200,40 @@ Output at: `src-tauri/target/x86_64-apple-darwin/release/bundle/macos/`
 
 ```
 my-translator/
-  src/                  # Frontend (HTML/CSS/JS)
-    index.html          # Main entry point
-    js/                 # JavaScript modules
-      app.js            # Core app logic
-      soniox.js         # Soniox STT + translation client
-      edge-tts.js       # Edge TTS provider
-      google-tts.js     # Google Cloud TTS provider
-      elevenlabs-tts.js # ElevenLabs TTS provider
-      audio-player.js   # TTS audio playback
-      settings.js       # Settings persistence
-      ui.js             # UI rendering and controls
-      updater.js        # Auto-update logic
-      llm-polish.js     # LLM-based translation refinement
+  src/                    # Frontend (HTML/CSS/JS, no build step)
+    index.html            # Single page; views toggled by .view.active
+    js/
+      app.js              # Main controller (TranslationApp)
+      ui.js               # Transcript rendering
+      soniox.js           # Soniox STT + translation client
+      audio-player.js     # TTS audio playback
+      edge-tts.js         # Edge TTS (via Rust proxy)
+      google-tts.js       # Google Chirp 3 HD TTS
+      elevenlabs-tts.js   # ElevenLabs TTS
+      llm-polish.js       # LLM Revise (Gemini / Claude / Ollama)
+      meeting-minutes.js  # Meeting mode — Gemini minutes generator
+      settings.js         # Settings persistence
+      updater.js          # Desktop auto-update UI
     styles/
-      main.css          # App stylesheet
-  src-tauri/            # Rust backend
-    Cargo.toml          # Rust dependencies
-    tauri.conf.json     # Tauri configuration
-    build.rs            # Build script (rpath setup)
+      main.css            # All styles (iOS overrides under .ios-app)
+  src-tauri/              # Rust backend
+    Cargo.toml            # Rust dependencies
+    tauri.conf.json       # Tauri configuration (bundle, updater endpoint)
+    build.rs              # Build script (rpath setup, macOS only)
+    Entitlements.plist    # macOS entitlements
+    capabilities/         # default.json (desktop) · ios.json (iOS)
+    gen/apple/project.yml # iOS xcodegen source (only tracked file under gen/)
     src/
-      main.rs           # Tauri command handlers
-      lib.rs            # Library entry point
-    icons/              # App icons (all sizes)
-    Entitlements.plist  # macOS entitlements
-  scripts/              # Helper scripts
-    local_pipeline.py   # Local MLX translation pipeline
-    setup_mlx.py        # MLX model downloader
-  docs/                 # User documentation
+      main.rs             # Binary entry — calls my_translator_lib::run()
+      lib.rs              # Tauri builder + command registration
+      settings.rs         # Settings struct + JSON persistence
+      audio/              # microphone.rs · system_audio.rs (macOS) · wasapi.rs (Windows) · system_audio_stub.rs (iOS/Linux)
+      commands/           # audio · transcript · settings · edge_tts · local_pipeline · meeting
+    icons/                # App icons (all sizes)
+  scripts/
+    local_pipeline.py     # Local MLX translation pipeline
+    setup_mlx.py          # MLX venv + model bootstrap
+  docs/                   # User documentation + changelog
 ```
 
 ---
@@ -257,7 +269,7 @@ Build succeeded, but the app needs a Soniox API key to function. See the [Instal
 ### Build takes too long
 
 - Debug builds compile faster: `npm run tauri build -- --debug`
-- Release builds run LTO and optimizations — first build may take 10–20 minutes
+- Release builds are optimized (default Cargo release profile, no LTO) — the first build compiles all dependencies and takes a few minutes; later builds take well under a minute
 - Subsequent builds are faster due to incremental compilation
 
 ---

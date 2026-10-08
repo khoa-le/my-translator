@@ -15,7 +15,7 @@ Hướng dẫn từng bước cài đặt và sử dụng **My Translator** trê
 
 ## Bước 1 — Tải về
 
-Tải file `.dmg` mới nhất tại: [**Releases — macOS**](https://github.com/phuc-nt/my-translator/releases/latest)
+Tải file `.dmg` mới nhất tại: [**Releases — macOS**](https://github.com/khoa-le/my-translator/releases/latest)
 
 Chọn đúng file:
 - `MyTranslator_x.x.x_aarch64.dmg` — Apple Silicon (M1/M2/M3/M4)

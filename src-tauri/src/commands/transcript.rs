@@ -36,10 +36,10 @@ pub fn save_transcript(app: AppHandle, content: String) -> Result<String, String
 #[tauri::command]
 #[allow(unused_variables)]
 pub fn open_transcript_dir(app: AppHandle) -> Result<(), String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Transcript directory not available on iOS".into());
 
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(not(mobile))]
     {
         let dir = transcript_dir(&app)?;
 

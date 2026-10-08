@@ -10,9 +10,9 @@
 
 | # | Feature | Value | Code Complexity | Perf Impact | Effort ước tính | Ưu tiên |
 |---|---------|-------|----------------|-------------|----------------|---------|
-| 1 | Copy / Export Transcript | ⭐⭐⭐ | 🟢 Rất thấp | 🟢 Không có | ~0.5 ngày | 🔴 P1 |
+| 1 | Copy / Export Transcript — ✅ một phần (auto-save `.md` + Copy trong Sessions; còn thiếu Copy All live, export `.srt`) | ⭐⭐⭐ | 🟢 Rất thấp | 🟢 Không có | ~0.5 ngày | 🔴 P1 |
 | 2 | Audio Normalization | ⭐⭐⭐ | 🟢 Rất thấp | 🟢 Không đáng kể | ~1 ngày | 🔴 P1 |
-| 3 | AI Summarize / Q&A | ⭐⭐⭐ | 🟡 Thấp-Trung | 🟢 Không có (async) | ~2 ngày | 🟠 P2 |
+| 3 | AI Summarize / Q&A — ✅ Summarize (Meeting mode, v0.8.0); còn thiếu Q&A | ⭐⭐⭐ | 🟡 Thấp-Trung | 🟢 Không có (async) | ~2 ngày | 🟠 P2 |
 | 4 | Furigana (Hiragana) | ⭐⭐ | 🟡 Thấp | 🟡 Nhẹ (~10-50ms/segment) | ~1 ngày | 🟡 P3 |
 | 5 | File Upload Mode | ⭐⭐⭐⭐ | 🔴 Cao | 🟡 Trung bình | ~5-7 ngày | 🟡 P3 |
 | 6 | OCR Screen Translate | ⭐⭐⭐ | 🔴 Rất cao | 🟡 Nhẹ (~500ms/shot) | ~7-10 ngày | 🟢 P4 |
@@ -61,6 +61,8 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 
 **Value**: Nhiều users yêu cầu, implement đơn giản, tăng utility ngay lập tức.
 
+**Trạng thái**: Transcript tự lưu thành `.md` khi Stop/Clear; màn hình Sessions (🕓) có nút Copy. Chưa có: Copy All ngay trong overlay, export `.txt` / `.srt`.
+
 **Hướng triển khai**:
 - Thêm nút **"Copy All"** copy toàn bộ transcript session vào clipboard
 - Cho phép select text trực tiếp trong overlay
@@ -68,7 +70,7 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 
 ---
 
-### 🟠 P2 — File Upload Mode (Video/Audio → Sub + TTS)
+### 🟡 P3 — File Upload Mode (Video/Audio → Sub + TTS)
 
 **Nguồn**: Nguyễn Đức + Lâm Ngọc — comment public
 **Vấn đề**: Người dùng có nội dung offline (khoá học, video ghi sẵn) muốn dịch mà không cần real-time.
@@ -86,7 +88,7 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 
 ---
 
-### 🟠 P2 — OCR Screen Translate
+### 🟢 P4 — OCR Screen Translate
 
 **Nguồn**: Hùng Vũ (@hungvu.net) — Facebook Messenger
 **Reference**: [TSnap](https://www.tsnap.tech/) — Instant Screenshot Translation for macOS
@@ -105,7 +107,7 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 
 ---
 
-### 🟡 P3 — AI Summarize / Q&A
+### 🟠 P2 — AI Summarize / Q&A
 
 **Nguồn**: Nguyễn Thanh Long — comment public
 **Yêu cầu**: Sau session dịch, gọi LLM để tóm tắt nội dung hoặc cho phép user hỏi đáp về những gì vừa nghe.
@@ -113,6 +115,8 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 **Value**: Tăng mạnh giá trị cho use case học tập / meeting — từ "sub thô" → "hiểu sâu nội dung".
 
 **Phụ thuộc**: Cần **Copy/Export Transcript** (P1) làm nền trước.
+
+**Trạng thái**: Phần tóm tắt đã có từ v0.8.0 qua **Meeting mode** — khi Stop, transcript được tóm tắt thành biên bản họp (Gemini hoặc Claude Code skill `meeting-minutes`) và gửi email. Chưa có: panel "Session Review" trong app và Q&A.
 
 **Hướng triển khai**:
 - Panel "Session Review" xuất hiện khi user Stop
@@ -122,7 +126,7 @@ macOS Vision framework yêu cầu Objective-C FFI trong Rust (`objc` crate) — 
 
 ---
 
-### 🟢 P4 — Furigana (Hiragana trên Kanji)
+### 🟡 P3 — Furigana (Hiragana trên Kanji)
 
 **Nguồn**: Nhat Pham — comment public
 **Yêu cầu**: Hiển thị phiên âm hiragana (furigana) phía trên kanji trong transcript tiếng Nhật.

@@ -37,7 +37,7 @@ pub fn start_local_pipeline(
     channel: Channel<String>,
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Local MLX pipeline is not supported on iOS".into());
 
     log_to_file(&format!("start_local_pipeline called: src={}, tgt={}", source_lang, target_lang));
@@ -186,7 +186,7 @@ pub fn send_audio_to_pipeline(
     data: Vec<u8>,
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Local MLX pipeline is not supported on iOS".into());
 
     let mut proc = state.process.lock().map_err(|e| e.to_string())?;
@@ -208,7 +208,7 @@ pub fn send_audio_to_pipeline(
 pub fn stop_local_pipeline(
     state: tauri::State<'_, LocalPipelineState>,
 ) -> Result<(), String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Local MLX pipeline is not supported on iOS".into());
 
     log_to_file("stop_local_pipeline called");
@@ -235,7 +235,7 @@ fn stop_local_pipeline_inner(state: &LocalPipelineState) {
 #[tauri::command]
 #[allow(unreachable_code)]
 pub fn check_mlx_setup() -> Result<String, String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Local MLX is not supported on iOS".into());
 
     let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/phucnt".to_string());
@@ -257,7 +257,7 @@ pub fn check_mlx_setup() -> Result<String, String> {
 pub fn run_mlx_setup(
     channel: Channel<String>,
 ) -> Result<(), String> {
-    #[cfg(target_os = "ios")]
+    #[cfg(mobile)]
     return Err("Local MLX setup is not supported on iOS".into());
 
     log_to_file("run_mlx_setup called");

@@ -33,8 +33,22 @@ src-tauri/target/
 .DS_Store
 Thumbs.db
 
-# Tauri generated
-src-tauri/gen/
+# Tauri generated — except the xcodegen source, which carries the iOS
+# framework links (AudioToolbox/AVFoundation/CoreAudio) and signing team
+src-tauri/gen/*
+!src-tauri/gen/apple/
+src-tauri/gen/apple/*
+!src-tauri/gen/apple/project.yml
+# Android: the manifest carries RECORD_AUDIO
+!src-tauri/gen/android/
+src-tauri/gen/android/*
+!src-tauri/gen/android/app/
+src-tauri/gen/android/app/*
+!src-tauri/gen/android/app/src/
+src-tauri/gen/android/app/src/*
+!src-tauri/gen/android/app/src/main/
+src-tauri/gen/android/app/src/main/*
+!src-tauri/gen/android/app/src/main/AndroidManifest.xml
 scripts/__pycache__/
 test_audio.wav
 

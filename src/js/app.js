@@ -12,6 +12,7 @@ import { elevenLabsTTS } from './elevenlabs-tts.js';
 import { googleTTS } from './google-tts.js';
 import { edgeTTSRust } from './edge-tts.js';
 import { audioPlayer } from './audio-player.js';
+import { webMic } from './web-mic.js';
 import { updater } from './updater.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -35,7 +36,7 @@ class App {
         this.ttsEnabled = false;
         this.isPinned = true;
         this.isCompact = false;
-        this.isIOS = false;
+        this.isMobile = false;
     }
 
     async init() {
@@ -82,12 +83,12 @@ class App {
 
         // Check for updates (non-blocking, desktop only)
         this._initAboutTab();
-        if (!this.isIOS) {
+        if (!this.isMobile) {
             this._checkForUpdates();
         }
 
         // iOS lifecycle: auto-restart after background
-        if (this.isIOS) {
+        if (this.isMobile) {
             this._wasRunningBeforeBackground = false;
             window.__TAURI__.event?.listen('app-resume', () => {
                 console.log('[App] App resumed from background');
@@ -108,14 +109,15 @@ class App {
             const arch = await invoke('get_platform_info');
             const info = JSON.parse(arch);
             this.isAppleSilicon = (info.os === 'macos' && info.arch === 'aarch64');
-            this.isIOS = !!info.ios;
+            this.isMobile = !!info.mobile;
+            this.isAndroid = info.os === 'android';
         } catch {
             this.isAppleSilicon = navigator.platform === 'MacIntel' &&
                 navigator.userAgent.includes('Mac OS X');
-            this.isIOS = false;
+            this.isMobile = false;
         }
 
-        if (this.isIOS) {
+        if (this.isMobile) {
             document.body.classList.add('ios-app');
             this.isAppleSilicon = false;
         }
@@ -172,7 +174,7 @@ class App {
         });
 
         // Close button (overlay)
-        if (!this.isIOS) {
+        if (!this.isMobile) {
             document.getElementById('btn-close').addEventListener('click', async () => {
                 await this._saveWindowPosition();
                 await this.stop();
@@ -248,7 +250,7 @@ class App {
         });
 
         // Source buttons
-        if (!this.isIOS) {
+        if (!this.isMobile) {
             document.getElementById('btn-source-system').addEventListener('click', () => {
                 this._setSource('system');
             });
@@ -459,6 +461,13 @@ class App {
             }
         };
 
+        // Speech already in the target language never gets a translation; show it as-is
+        // (single view only renders translated segments). No TTS / polish for it.
+        sonioxClient.onUntranslated = (text) => {
+            this._pendingOriginals.shift();
+            this.transcriptUI.addTranslation(text);
+        };
+
         sonioxClient.onProvisional = (text, speaker, language) => {
             if (text) {
                 this.transcriptUI.setProvisional(text, speaker, language);
@@ -533,7 +542,7 @@ class App {
             }
 
             // Cmd/Ctrl + 1: Switch to System Audio
-            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === '1') {
+            if (!this.isMobile && (e.metaKey || e.ctrlKey) && e.key === '1') {
                 e.preventDefault();
                 this._setSource('system');
             }
@@ -545,7 +554,7 @@ class App {
             }
 
             // Cmd/Ctrl + 3: Switch to Both
-            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === '3') {
+            if (!this.isMobile && (e.metaKey || e.ctrlKey) && e.key === '3') {
                 e.preventDefault();
                 this._setSource('both');
             }
@@ -557,20 +566,20 @@ class App {
             }
 
             // Cmd/Ctrl + M: Minimize
-            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'm') {
+            if (!this.isMobile && (e.metaKey || e.ctrlKey) && e.key === 'm') {
                 e.preventDefault();
                 this._saveWindowPosition();
                 this.appWindow.minimize();
             }
 
             // Cmd/Ctrl + P: Toggle Pin
-            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'p') {
+            if (!this.isMobile && (e.metaKey || e.ctrlKey) && e.key === 'p') {
                 e.preventDefault();
                 this._togglePin();
             }
 
             // Cmd/Ctrl + D: Toggle Compact
-            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'd') {
+            if (!this.isMobile && (e.metaKey || e.ctrlKey) && e.key === 'd') {
                 e.preventDefault();
                 this._toggleCompact();
             }
@@ -858,7 +867,7 @@ class App {
         }
 
         // Update current source button states
-        if (this.isIOS) {
+        if (this.isMobile) {
             this.currentSource = 'microphone';
         } else {
             this.currentSource = settings.audio_source || 'system';
@@ -1150,7 +1159,7 @@ class App {
     // ─── Source Control ────────────────────────────────────
 
     _setSource(source) {
-        if (this.isIOS && source !== 'microphone') return;
+        if (this.isMobile && source !== 'microphone') return;
         const wasRunning = this.isRunning;
         const labels = { system: 'System Audio', microphone: 'Microphone', both: 'System + Mic' };
         const label = labels[source] || source;
@@ -1201,7 +1210,7 @@ class App {
         const settings = settingsManager.get();
         this.translationMode = settings.translation_mode || 'soniox';
 
-        if (this.isIOS) {
+        if (this.isMobile) {
             this.currentSource = 'microphone';
         }
 
@@ -1297,10 +1306,15 @@ class App {
             };
 
             console.log('[App] Starting audio capture, source:', this.currentSource);
-            await invoke('start_capture', {
-                source: this.currentSource,
-                channel: channel,
-            });
+            if (this.isAndroid) {
+                // Android: cpal's mic route is near-silent on some phones — see web-mic.js
+                await webMic.start((pcm) => sonioxClient.sendAudio(pcm));
+            } else {
+                await invoke('start_capture', {
+                    source: this.currentSource,
+                    channel: channel,
+                });
+            }
             console.log('[App] Audio capture started successfully');
         } catch (err) {
             console.error('Failed to start audio capture:', err);
@@ -1570,13 +1584,14 @@ class App {
     }
 
     async stop() {
-        if (this.isIOS && this.isRunning) {
+        if (this.isMobile && this.isRunning) {
             this._wasRunningBeforeBackground = true;
         }
         this.isRunning = false;
         this._updateStartButton();
 
         // Stop audio capture
+        if (this.isAndroid) webMic.stop();
         try {
             await invoke('stop_capture');
         } catch (err) {

@@ -37,6 +37,14 @@ Speech in **Language A** → translates to **B**; speech in **B** → translates
 ### What's "LLM Revise"?
 Optional post-processor that takes the Soniox translation and rewrites it in your chosen tone (formal, casual, business, custom persona). Adds 0.5–2 s latency depending on display mode. Provider can be Gemini, Claude, or Ollama (local). Settings → "Enable LLM Revise".
 
+### What's "Meeting mode"?
+When it's on, pressing **Stop** turns the session transcript into structured meeting minutes and emails them to you. Settings → Translation → **Meeting mode**:
+- **Minutes generator**
+  - **Gemini** — uses the Gemini key and model from LLM Revise (LLM Revise provider must be Gemini with a key). Minutes are written in the target language. Takes ~10 s.
+  - **Claude Code** (desktop only) — runs your local `claude` CLI with your `meeting-minutes` skill (`~/.claude/skills/meeting-minutes`) and emails every `.md` file it writes (by default a primary-language and a source-language version). Takes ~40 s. Requires Claude Code installed and logged in. The prompt is editable in the **Claude Code prompt** box; leave it empty to use the default.
+- **Email** — sent through `smtp.gmail.com` with a Gmail address and a Gmail **app password** (myaccount.google.com/apppasswords; needs 2-Step Verification). **Send to** defaults to the sender address.
+- The result only shows as a toast ("Minutes emailed to …" or the error). Claude Code runs are kept in `~/Library/Application Support/com.personal.translator/minutes/<timestamp>/`.
+
 ### Which TTS should I pick?
 - **Edge TTS** — Free, decent quality, ~7 voices included. Good default.
 - **Google Chirp 3 HD** — Premium quality, requires Google Cloud API key + billing.
@@ -48,8 +56,8 @@ Optional post-processor that takes the Soniox translation and rewrites it in you
 - **iOS**: No. Apple's sandboxing requires a ReplayKit Broadcast Extension, not implemented. Mic only.
 
 ### Where are transcripts saved?
-- macOS: `~/Library/Application Support/My Translator/transcripts/`
-- Windows: `%APPDATA%\My Translator\transcripts\`
+- macOS: `~/Library/Application Support/com.personal.translator/transcripts/`
+- Windows: `%APPDATA%\com.personal.translator\transcripts\`
 - iOS: Sandboxed app container — view via the Sessions screen (🕓 icon).
 
 ### How do I change the font size / colors during a live session?
@@ -130,11 +138,11 @@ npx tauri ios dev "iPhone 16e"
 Pick any iPhone simulator name. First run takes 5–10 min (full Rust cross-compile + cocoapods).
 
 ### How do I update the app version?
-1. Bump `version` in `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` (keep them in sync).
-2. Bump `version` in `package.json`.
+1. Bump `version` in `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` (keep them in sync), then run `cargo check` so `src-tauri/Cargo.lock` picks it up.
+2. Bump `version` in `package.json` and both `version` fields at the top of `package-lock.json`.
 3. iOS: also bump `CFBundleShortVersionString` and `CFBundleVersion` in `src-tauri/gen/apple/project.yml`, then run `xcodegen generate` in `src-tauri/gen/apple/`.
-4. Add an entry to `CHANGELOG.md`.
-5. Commit, tag (`git tag v0.X.Y`), push tag — CI publishes the desktop release.
+4. Add a `## v0.X.Y - YYYY-MM-DD` section to `docs/project-changelog.md` — the release workflow uses it as the GitHub Release notes.
+5. Commit, tag (`git tag -a v0.X.Y`), push only that tag (`git push origin refs/tags/v0.X.Y`) — CI publishes the desktop release. On a fork, workflows must first be enabled once in the repo's **Actions** tab.
 
 ### Where do the build outputs go?
 - Desktop: `src-tauri/target/release/bundle/` (DMG, MSI, AppImage, etc.)
@@ -200,15 +208,15 @@ Restart the app after granting.
 - iOS: Make sure ringer is on / not in silent mode (system audio routing).
 
 ### App crashes on launch after a fresh install.
-Reset settings: delete the settings.json in `app_data_dir()` (see "Where are transcripts saved?" for the path). Reopen — defaults will load.
+Reset settings: delete `settings.json` in the same folder as the transcripts (see "Where are transcripts saved?"). Reopen — defaults will load.
 
 ### Very high latency.
 - Soniox: try Settings → Endpoint Delay slider lower (default 3 s).
-- Local MLX: expected ~3–4 s — that's whisper's small model. Use a faster ASR engine in `scripts/local_pipeline.py` if needed.
+- Local MLX: expected ~3–4 s — Whisper large-v3-turbo on MLX (`mlx-community/whisper-large-v3-turbo`). Use a faster ASR engine in `scripts/local_pipeline.py` if needed.
 - LLM Revise: adds 0.5–2 s. Switch to "Replace" display mode for faster perceived feedback.
 
 ### Updater says "no update available" but there is one.
-Updater hits `https://github.com/phuc-nt/my-translator/releases/latest/download/latest.json`. Make sure the latest GH release has `latest.json` attached (CI does this).
+Updater hits `https://github.com/khoa-le/my-translator/releases/latest/download/latest.json` (set in `src-tauri/tauri.conf.json` → `plugins.updater.endpoints`). Make sure the latest GH release has `latest.json` attached (CI does this).
 
 ### Local MLX setup fails.
 - Need Apple Silicon (arm64) Mac. Intel is not supported.
