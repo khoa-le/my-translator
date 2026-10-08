@@ -7,6 +7,7 @@ import { settingsManager } from './settings.js';
 import { TranscriptUI } from './ui.js';
 import { sonioxClient } from './soniox.js';
 import { llmPolishClient } from './llm-polish.js';
+import { generateMinutesGemini } from './meeting-minutes.js';
 import { elevenLabsTTS } from './elevenlabs-tts.js';
 import { googleTTS } from './google-tts.js';
 import { edgeTTSRust } from './edge-tts.js';
@@ -19,21 +20,22 @@ const { getCurrentWindow } = window.__TAURI__.window;
 class App {
     constructor() {
         this.isRunning = false;
-        this.isStarting = false; // Guard against re-entry
-        this.currentSource = 'system'; // 'system' | 'microphone' | 'both'
-        this.translationMode = 'soniox'; // 'soniox' | 'local'
+        this.isStarting = false;
+        this.currentSource = 'system';
+        this.translationMode = 'soniox';
         this.transcriptUI = null;
         this.appWindow = getCurrentWindow();
         this.localPipelineChannel = null;
         this.localPipelineReady = false;
         this.recordingStartTime = null;
-        this.sessionStartTime = null;  // Session start timestamp (new Date())
+        this.sessionStartTime = null;
         this.sessionSourceLang = 'auto';
         this.sessionTargetLang = 'vi';
         this.sessionMode = 'one_way';
-        this.ttsEnabled = false;  // TTS runtime toggle
-        this.isPinned = true;     // Always-on-top state
-        this.isCompact = false;   // Compact mode (hide control bar)
+        this.ttsEnabled = false;
+        this.isPinned = true;
+        this.isCompact = false;
+        this.isIOS = false;
     }
 
     async init() {
@@ -78,32 +80,51 @@ class App {
         // Window position restore disabled — causes issues on Retina displays
         // await this._restoreWindowPosition();
 
-        // Check for updates (non-blocking)
+        // Check for updates (non-blocking, desktop only)
         this._initAboutTab();
-        this._checkForUpdates();
+        if (!this.isIOS) {
+            this._checkForUpdates();
+        }
+
+        // iOS lifecycle: auto-restart after background
+        if (this.isIOS) {
+            this._wasRunningBeforeBackground = false;
+            window.__TAURI__.event?.listen('app-resume', () => {
+                console.log('[App] App resumed from background');
+                if (this._wasRunningBeforeBackground && !this.isRunning) {
+                    this._wasRunningBeforeBackground = false;
+                    this.start().catch((err) => {
+                        console.error('[App] Auto-restart failed:', err);
+                    });
+                }
+            });
+        }
 
         console.log('🌐 My Translator v0.5.0 initialized');
     }
 
     async _checkPlatformSupport() {
         try {
-            // Check if we're on macOS Apple Silicon
             const arch = await invoke('get_platform_info');
             const info = JSON.parse(arch);
             this.isAppleSilicon = (info.os === 'macos' && info.arch === 'aarch64');
+            this.isIOS = !!info.ios;
         } catch {
-            // Fallback: check via navigator
             this.isAppleSilicon = navigator.platform === 'MacIntel' &&
                 navigator.userAgent.includes('Mac OS X');
+            this.isIOS = false;
+        }
+
+        if (this.isIOS) {
+            document.body.classList.add('ios-app');
+            this.isAppleSilicon = false;
         }
 
         if (!this.isAppleSilicon) {
-            // Hide Local MLX option
             const select = document.getElementById('select-translation-mode');
             const localOption = select?.querySelector('option[value="local"]');
             if (localOption) localOption.remove();
 
-            // Force soniox mode if user had local selected
             const settings = settingsManager.get();
             if (settings.translation_mode === 'local') {
                 settings.translation_mode = 'soniox';
@@ -151,27 +172,38 @@ class App {
         });
 
         // Close button (overlay)
-        document.getElementById('btn-close').addEventListener('click', async () => {
-            await this._saveWindowPosition();
-            await this.stop();
-            await this.appWindow.close();
-        });
+        if (!this.isIOS) {
+            document.getElementById('btn-close').addEventListener('click', async () => {
+                await this._saveWindowPosition();
+                await this.stop();
+                await this.appWindow.close();
+            });
 
-        // Minimize button
-        document.getElementById('btn-minimize').addEventListener('click', async () => {
-            await this._saveWindowPosition();
-            await this.appWindow.minimize();
-        });
+            // Minimize button
+            document.getElementById('btn-minimize').addEventListener('click', async () => {
+                await this._saveWindowPosition();
+                await this.appWindow.minimize();
+            });
 
-        // Pin/Unpin button
-        document.getElementById('btn-pin').addEventListener('click', () => {
-            this._togglePin();
-        });
+            // Pin/Unpin button
+            document.getElementById('btn-pin').addEventListener('click', () => {
+                this._togglePin();
+            });
 
-        // Compact mode button
-        document.getElementById('btn-compact').addEventListener('click', () => {
-            this._toggleCompact();
-        });
+            // Compact mode button
+            document.getElementById('btn-compact').addEventListener('click', () => {
+                this._toggleCompact();
+            });
+
+            // Open saved transcripts folder
+            document.getElementById('btn-open-transcripts').addEventListener('click', async () => {
+                try {
+                    await invoke('open_transcript_dir');
+                } catch (err) {
+                    this._showToast('Failed to open folder: ' + err, 'error');
+                }
+            });
+        }
 
         // View mode toggle (dual panel)
         document.getElementById('btn-view-mode').addEventListener('click', () => {
@@ -216,15 +248,17 @@ class App {
         });
 
         // Source buttons
-        document.getElementById('btn-source-system').addEventListener('click', () => {
-            this._setSource('system');
-        });
+        if (!this.isIOS) {
+            document.getElementById('btn-source-system').addEventListener('click', () => {
+                this._setSource('system');
+            });
+            document.getElementById('btn-source-both').addEventListener('click', () => {
+                this._setSource('both');
+            });
+        }
 
         document.getElementById('btn-source-mic').addEventListener('click', () => {
             this._setSource('microphone');
-        });
-        document.getElementById('btn-source-both').addEventListener('click', () => {
-            this._setSource('both');
         });
 
         // Clear button — clears display only (auto-save happens on stop)
@@ -242,15 +276,6 @@ class App {
                 this._showToast('Copied to clipboard', 'success');
             } else {
                 this._showToast('Nothing to copy', 'info');
-            }
-        });
-
-        // Open saved transcripts folder (kept for Finder access)
-        document.getElementById('btn-open-transcripts').addEventListener('click', async () => {
-            try {
-                await invoke('open_transcript_dir');
-            } catch (err) {
-                this._showToast('Failed to open folder: ' + err, 'error');
             }
         });
 
@@ -508,7 +533,7 @@ class App {
             }
 
             // Cmd/Ctrl + 1: Switch to System Audio
-            if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === '1') {
                 e.preventDefault();
                 this._setSource('system');
             }
@@ -520,7 +545,7 @@ class App {
             }
 
             // Cmd/Ctrl + 3: Switch to Both
-            if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === '3') {
                 e.preventDefault();
                 this._setSource('both');
             }
@@ -532,20 +557,20 @@ class App {
             }
 
             // Cmd/Ctrl + M: Minimize
-            if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
+            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'm') {
                 e.preventDefault();
                 this._saveWindowPosition();
                 this.appWindow.minimize();
             }
 
             // Cmd/Ctrl + P: Toggle Pin
-            if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'p') {
                 e.preventDefault();
                 this._togglePin();
             }
 
             // Cmd/Ctrl + D: Toggle Compact
-            if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+            if (!this.isIOS && (e.metaKey || e.ctrlKey) && e.key === 'd') {
                 e.preventDefault();
                 this._toggleCompact();
             }
@@ -692,6 +717,14 @@ class App {
         if (llmInstr) llmInstr.value = s.llm_polish_instructions || '';
         const llmMode = document.getElementById('select-llm-polish-display-mode');
         if (llmMode) llmMode.value = s.llm_polish_display_mode || 'replace';
+
+        // Meeting mode
+        document.getElementById('check-meeting-mode').checked = !!s.meeting_mode_enabled;
+        document.getElementById('select-minutes-engine').value = s.minutes_engine || 'gemini';
+        document.getElementById('input-minutes-email-to').value = s.minutes_email_to || '';
+        document.getElementById('input-smtp-username').value = s.smtp_username || '';
+        document.getElementById('input-smtp-password').value = s.smtp_password || '';
+        document.getElementById('input-claude-code-prompt').value = s.claude_code_prompt || '';
     }
 
     _updateLlmPolishProviderUI(provider) {
@@ -791,6 +824,14 @@ class App {
         settings.llm_polish_instructions = document.getElementById('input-llm-polish-instructions')?.value || '';
         settings.llm_polish_display_mode = document.getElementById('select-llm-polish-display-mode')?.value || 'replace';
 
+        // Meeting mode
+        settings.meeting_mode_enabled = document.getElementById('check-meeting-mode').checked;
+        settings.minutes_engine = document.getElementById('select-minutes-engine').value;
+        settings.minutes_email_to = document.getElementById('input-minutes-email-to').value.trim();
+        settings.smtp_username = document.getElementById('input-smtp-username').value.trim();
+        settings.smtp_password = document.getElementById('input-smtp-password').value.trim();
+        settings.claude_code_prompt = document.getElementById('input-claude-code-prompt').value.trim();
+
         try {
             await settingsManager.save(settings);
             this._showToast('Settings saved', 'success');
@@ -817,7 +858,11 @@ class App {
         }
 
         // Update current source button states
-        this.currentSource = settings.audio_source || 'system';
+        if (this.isIOS) {
+            this.currentSource = 'microphone';
+        } else {
+            this.currentSource = settings.audio_source || 'system';
+        }
         this._updateSourceButtons();
 
         // TTS is always OFF on app start — user must toggle on each session
@@ -1105,6 +1150,7 @@ class App {
     // ─── Source Control ────────────────────────────────────
 
     _setSource(source) {
+        if (this.isIOS && source !== 'microphone') return;
         const wasRunning = this.isRunning;
         const labels = { system: 'System Audio', microphone: 'Microphone', both: 'System + Mic' };
         const label = labels[source] || source;
@@ -1154,7 +1200,10 @@ class App {
     async start() {
         const settings = settingsManager.get();
         this.translationMode = settings.translation_mode || 'soniox';
-        console.log('[App] start() called, translation_mode:', this.translationMode, 'settings:', JSON.stringify(settings));
+
+        if (this.isIOS) {
+            this.currentSource = 'microphone';
+        }
 
         // Check Soniox API key only for cloud mode
         if (this.translationMode === 'soniox' && !settings.soniox_api_key) {
@@ -1171,6 +1220,7 @@ class App {
         }
 
         this.isRunning = true;
+        this._wasRunningBeforeBackground = false;
         this._updateStartButton();
         if (!this.recordingStartTime) this.recordingStartTime = Date.now();
 
@@ -1520,6 +1570,9 @@ class App {
     }
 
     async stop() {
+        if (this.isIOS && this.isRunning) {
+            this._wasRunningBeforeBackground = true;
+        }
         this.isRunning = false;
         this._updateStartButton();
 
@@ -1556,8 +1609,12 @@ class App {
 
         // Auto-save on stop — use full sessionLog (not trimmed display buffer)
         if (this.transcriptUI.hasSessionContent()) {
-            await this._saveTranscriptFile();
+            const transcript = await this._saveTranscriptFile();
             this.transcriptUI.clearSession();
+            // Runs in the background — can take a minute with Claude Code
+            if (transcript && settingsManager.get().meeting_mode_enabled) {
+                this._sendMeetingMinutes(transcript);
+            }
         }
 
         // Reset session tracking
@@ -1611,6 +1668,35 @@ class App {
         } catch (err) {
             console.error('Failed to save transcript:', err);
             this._showToast('Failed to save transcript', 'error');
+        }
+        return content;
+    }
+
+    async _sendMeetingMinutes(transcript) {
+        const s = settingsManager.get();
+        this._showToast('Generating meeting minutes…', 'success');
+        try {
+            let body;
+            if (s.minutes_engine === 'claude_code') {
+                const files = await invoke('generate_minutes_claude_code', { transcript });
+                body = files.map(f => f.content).join('\n\n---\n\n');
+            } else {
+                if (s.llm_polish_provider !== 'gemini' || !s.llm_polish_api_key) {
+                    throw new Error('Gemini minutes need a Gemini provider + API key in LLM Revise settings');
+                }
+                body = await generateMinutesGemini({
+                    transcript,
+                    apiKey: s.llm_polish_api_key,
+                    model: s.llm_polish_model,
+                    targetLang: s.target_language || 'vi',
+                });
+            }
+            const subject = `Meeting minutes — ${new Date().toLocaleString()}`;
+            const to = await invoke('send_minutes_email', { subject, body });
+            this._showToast(`Minutes emailed to ${to}`, 'success');
+        } catch (err) {
+            console.error('Meeting minutes failed:', err);
+            this._showToast(`Meeting minutes failed: ${err?.message || err}`, 'error');
         }
     }
 

@@ -85,6 +85,20 @@ pub struct Settings {
     ///   "wait"    — hold rendering until polish finishes (or timeout); no flicker, more latency
     ///   "append"  — show both: Soniox draft stays, polished version appears under it
     pub llm_polish_display_mode: String,
+
+    // ─── Meeting mode (minutes emailed after the session stops) ───
+    /// Whether to generate + email meeting minutes when a session stops
+    pub meeting_mode_enabled: bool,
+    /// Minutes generator: "gemini" (Gemini key/model from LLM Revise) | "claude_code" (local `claude` CLI + meeting-minutes skill)
+    pub minutes_engine: String,
+    /// Recipient address for the minutes email
+    pub minutes_email_to: String,
+    /// Gmail address used to send via smtp.gmail.com
+    pub smtp_username: String,
+    /// Gmail app password
+    pub smtp_password: String,
+    /// Prompt passed to `claude -p` for the "claude_code" minutes engine (runs next to ./transcript.md)
+    pub claude_code_prompt: String,
 }
 
 impl Default for Settings {
@@ -119,6 +133,12 @@ impl Default for Settings {
             llm_polish_instructions: String::new(),
             llm_polish_timeout_ms: 1500,
             llm_polish_display_mode: "replace".to_string(),
+            meeting_mode_enabled: false,
+            minutes_engine: "gemini".to_string(),
+            minutes_email_to: String::new(),
+            smtp_username: String::new(),
+            smtp_password: String::new(),
+            claude_code_prompt: crate::commands::meeting::DEFAULT_CLAUDE_PROMPT.to_string(),
         }
     }
 }

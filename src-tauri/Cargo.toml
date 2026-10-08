@@ -1,6 +1,6 @@
 [package]
 name = "my-translator"
-version = "0.5.3"
+version = "0.8.0"
 description = "Personal Real-time Speech Translator"
 authors = ["phucnt"]
 edition = "2021"
@@ -13,6 +13,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# macos-private-api feature is internally cfg'd to macOS; it's a no-op on other platforms.
+# Must stay on the top-level dep because tauri.conf.json's `macOSPrivateApi: true` is global.
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
@@ -29,10 +31,10 @@ http = "1"
 sha2 = "0.10"
 hex = "0.4"
 rand = "0.8"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
 
 # macOS: ScreenCaptureKit for system audio
 [target.'cfg(target_os = "macos")'.dependencies]
-tauri = { version = "2", features = ["macos-private-api"] }
 screencapturekit = "1.5"
 
 # Windows: WASAPI for system audio (legacy loopback only)

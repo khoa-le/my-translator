@@ -8,13 +8,17 @@ use commands::audio::AudioState;
 use commands::local_pipeline::LocalPipelineState;
 use settings::{Settings, SettingsState};
 use std::sync::Mutex;
+#[cfg(target_os = "ios")]
+use tauri::{Emitter, Listener};
 
 #[tauri::command]
 fn get_platform_info() -> String {
     format!(
-        r#"{{"os":"{}","arch":"{}","version":"0.3.0"}}"#,
+        r#"{{"os":"{}","arch":"{}","version":"{}","ios":{}}}"#,
         std::env::consts::OS,
-        std::env::consts::ARCH
+        std::env::consts::ARCH,
+        env!("CARGO_PKG_VERSION"),
+        cfg!(target_os = "ios")
     )
 }
 
@@ -30,6 +34,13 @@ pub fn run() {
             {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
+            }
+            #[cfg(target_os = "ios")]
+            {
+                let handle = app.handle().clone();
+                app.listen("tauri://resume", move |_| {
+                    let _ = handle.emit("app-resume", ());
+                });
             }
             Ok(())
         })
@@ -58,6 +69,8 @@ pub fn run() {
             commands::local_pipeline::check_mlx_setup,
             commands::local_pipeline::run_mlx_setup,
             commands::edge_tts::edge_tts_speak,
+            commands::meeting::generate_minutes_claude_code,
+            commands::meeting::send_minutes_email,
             get_platform_info,
         ])
         .run(tauri::generate_context!())

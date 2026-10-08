@@ -157,8 +157,15 @@ fn stop_capture_inner(state: &AudioState) {
 /// Check audio capture permissions
 #[tauri::command]
 pub fn check_permissions() -> PermissionStatus {
-    // Note: Actual permission checking on macOS requires Objective-C interop
-    // For now, we return "unknown" and permissions will be prompted on first use
+    #[cfg(target_os = "ios")]
+    {
+        return PermissionStatus {
+            screen_recording: "unsupported".to_string(),
+            microphone: "prompted_on_use".to_string(),
+        };
+    }
+
+    #[cfg(not(target_os = "ios"))]
     PermissionStatus {
         screen_recording: "unknown".to_string(),
         microphone: "unknown".to_string(),
